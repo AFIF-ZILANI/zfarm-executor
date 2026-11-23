@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 
 import {
+  formatEntered,
   usableUnits,
   attentionOrder,
   categoryCounts,
@@ -174,3 +175,6 @@ assert.deepEqual(
   assert.deepEqual(stockFigure(100, feed), { main: '2 Bag', sub: '' });
   assert.deepEqual(stockFigure(40, { unit: 'ML', itemUnits: [] } as unknown as Item), { main: '40', sub: 'ml' });
 }
+
+// A custom unit's code reads as words, not as a code.
+assert.equal(formatEntered(2, 'SMALL_BAG'), '2 small bag');

@@ -5,7 +5,7 @@ const plural = (word: string, n: number) => (n === 1 ? word : /(s|x|ch|sh)$/.tes
 /** "3 bottles · 3 liter" — what is in the house, in packs and, when the lots know their size, in volume. */
 export function stockLabel(line: HouseCodedStock): string {
   // A lot bought by volume (pack unit = the item's own unit, e.g. LITER) has no container name to give.
-  const pack = line.pack_unit && line.pack_unit !== line.unit ? line.pack_unit.toLowerCase() : 'unit';
+  const pack = line.pack_unit && line.pack_unit !== line.unit ? line.pack_unit.replace(/_/g, ' ').toLowerCase() : 'unit';
   const count = `${line.units} ${plural(pack, line.units)}`;
   if (line.quantity === null) return count;
   const amount = line.quantity.toLocaleString('en-US', { maximumFractionDigits: 2 });

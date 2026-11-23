@@ -128,6 +128,6 @@ export function scanErrorMessage(status: number, detail: string | undefined): st
   if (status === 404) return 'Unknown code — not a ZeroD stock unit.';
   if (status === 0) return "Couldn't reach the server.";
   const unit = detail?.match(/"([^"]+)" is not a valid unit for using this item/)?.[1];
-  if (unit) return `This item can't be used by the ${unit.toLowerCase()} yet. Ask a manager to set it up.`;
+  if (unit) return `This item can't be used by the ${unit.replace(/_/g, ' ').toLowerCase()} yet. Ask a manager to set it up.`;
   return detail?.trim() || `Failed with ${status}.`;
 }

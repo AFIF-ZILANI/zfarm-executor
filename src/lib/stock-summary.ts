@@ -75,7 +75,7 @@ export function formatStock(n: number, item: Pick<Item, 'unit' | 'itemUnits'>): 
 export function formatEntered(quantity: number, unit: string, item?: Pick<Item, 'unit' | 'itemUnits'> | null): string {
   if (item && unit === item.unit) return formatStock(quantity, item);
   if (unit === 'BAG') return `${formatBalance(quantity)} Bag`;
-  return `${formatBalance(quantity)} ${unit.toLowerCase()}`;
+  return `${formatBalance(quantity)} ${unit.replace(/_/g, ' ').toLowerCase()}`;
 }
 
 /** A stock figure split for a big-number layout: the headline and the line under it. Feed gives
