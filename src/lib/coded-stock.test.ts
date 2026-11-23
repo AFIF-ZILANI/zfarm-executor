@@ -22,6 +22,7 @@ assert.equal(stockLabel(line({ quantity: null })), '3 bottles'); // size unknown
 assert.equal(stockLabel(line({ pack_unit: null, quantity: null })), '3 units'); // mixed pack types
 assert.equal(stockLabel(line({ pack_unit: 'BOX', units: 2, quantity: null })), '2 boxes');
 assert.equal(stockLabel(line({ pack_unit: 'SMALL_BOTTLE', units: 2, quantity: null })), '2 small bottles'); // custom unit
+assert.equal(stockLabel(line({ pack_unit: 'SMALL_BOTTLE', pack_label: 'Vial', units: 2, quantity: null })), '2 vials'); // renamed
 assert.equal(stockLabel(line({ pack_unit: 'LITER', units: 3, quantity: 2 })), '3 units · 2 liter'); // bought by volume: no container name
 
 const lines = [line(), line({ item_id: 'b', units: 4 })];

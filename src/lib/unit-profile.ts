@@ -18,6 +18,8 @@ export type UnitProfile = {
     id: string;
     quantity: string;
     unit: string;
+    /** unit's current name; absent from older servers. */
+    unit_label?: string;
     base_quantity: string;
     unit_count: number | null;
     /** Prices are null for a worker: only managers see what stock cost. */

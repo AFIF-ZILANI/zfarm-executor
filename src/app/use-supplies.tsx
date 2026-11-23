@@ -92,7 +92,7 @@ export default function UseSuppliesScreen() {
       hint="Feed, husk and other items without QR codes, used in a house. It comes off that house's stock."
       dirty={!!picked || !!quantity || !!note}
       submit={{
-        label: quantityNum > 0 && item ? `Use ${bagged ? stock(baseQty) : `${quantity} ${unitText(unit?.unit)}`} ${item.name.toLowerCase()}` : 'Use supplies',
+        label: quantityNum > 0 && item ? `Use ${bagged ? stock(baseQty) : `${quantity} ${unit?.name.toLowerCase() ?? ''}`} ${item.name.toLowerCase()}` : 'Use supplies',
         onPress: handleSubmit,
         disabled: !isValid,
         loading: submitting,
@@ -130,7 +130,7 @@ export default function UseSuppliesScreen() {
             <PillSelect
               options={units.map((u) => ({
                 value: u.unit,
-                label: u.factor === 1 ? humanise(u.unit) : `${humanise(u.unit)} · ${formatBalance(u.factor)} ${baseText}`,
+                label: u.factor === 1 ? u.name : `${u.name} · ${formatBalance(u.factor)} ${baseText}`,
               }))}
               value={unit?.unit ?? null}
               onChange={setUnitCode}
@@ -143,7 +143,7 @@ export default function UseSuppliesScreen() {
           label="Quantity"
           value={quantity}
           onChangeText={setQuantity}
-          unit={unit ? humanise(unit.unit) : undefined}
+          unit={unit?.name}
           autoFocus={!!params.house_id && !!params.item_id}
           warn={overStock}
           helper={

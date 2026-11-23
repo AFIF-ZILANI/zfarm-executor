@@ -18,7 +18,7 @@ import { Spacing } from '@/constants/theme';
 import { ApiError, apiFetch, useGetData, type Paginated } from '@/lib/api';
 import { goBack } from '@/lib/nav';
 import { humanise } from '@/lib/profile-format';
-import { formatBalance, usableUnits } from '@/lib/stock-summary';
+import { formatBalance, unitName, usableUnits } from '@/lib/stock-summary';
 import type { Item, StockUnit } from '@/lib/types';
 
 /** GET /consumptions/:id -- the record and what this form needs before offering a fix. */
@@ -213,7 +213,7 @@ function FixForm({ c }: { c: ConsumptionDetail }) {
     >
       <FormCard>
         <AppText variant="bodyStrong">
-          {formatBalance(Number(c.quantity))} {humanise(c.unit).toLowerCase()} {item.name}
+          {formatBalance(Number(c.quantity))} {unitName(c.unit, item).toLowerCase()} {item.name}
         </AppText>
         <AppText variant="caption" color="muted">
           {[c.house.name, c.batch?.batch_code, c.recorded_by.name, new Date(c.date).toLocaleDateString('en-GB')].filter(Boolean).join(' · ')}
@@ -241,14 +241,14 @@ function FixForm({ c }: { c: ConsumptionDetail }) {
                 <PillSelect
                   options={units.map((u) => ({
                     value: u.unit,
-                    label: u.factor === 1 ? humanise(u.unit) : `${humanise(u.unit)} · ${formatBalance(u.factor)} ${humanise(item.unit).toLowerCase()}`,
+                    label: u.factor === 1 ? u.name : `${u.name} · ${formatBalance(u.factor)} ${humanise(item.unit).toLowerCase()}`,
                   }))}
                   value={unitCode}
                   onChange={setUnitCode}
                 />
               </View>
             ) : null}
-            <NumberField label="Quantity" value={quantity} onChangeText={setQuantity} unit={humanise(unitCode)} warn={!(quantityNum > 0)} />
+            <NumberField label="Quantity" value={quantity} onChangeText={setQuantity} unit={unitName(unitCode, item)} warn={!(quantityNum > 0)} />
           </>
         ) : usedUp ? (
           <AppText variant="caption" color="muted">

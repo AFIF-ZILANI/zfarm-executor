@@ -1,3 +1,4 @@
+import { humanise } from './profile-format';
 import type { Item } from './types';
 
 /** One row of GET /items/stock-by-location (balance is a Decimal string). */
@@ -70,12 +71,17 @@ export function formatStock(n: number, item: Pick<Item, 'unit' | 'itemUnits'>): 
   return loose > 0 ? `${sign}${formatBalance(bags)} Bag ${formatBalance(loose)} ${base}` : `${sign}${formatBalance(bags)} Bag`;
 }
 
+/** What a unit is called now: its name on the item, else its code in words (an old queued record). */
+export function unitName(code: string, item?: Partial<Pick<Item, 'unit' | 'itemUnits'>> | null): string {
+  return item?.itemUnits?.find((u) => u.unit === code)?.unitRef?.label ?? humanise(code);
+}
+
 /** A quantity as entered (a draw, a move): in the base unit it reads like stock ("2 Bag 20 kg"); in a bag
  *  it's "2 Bag"; any other unit stays as entered. `item` may be unknown (an old queued record). */
 export function formatEntered(quantity: number, unit: string, item?: Pick<Item, 'unit' | 'itemUnits'> | null): string {
   if (item && unit === item.unit) return formatStock(quantity, item);
   if (unit === 'BAG') return `${formatBalance(quantity)} Bag`;
-  return `${formatBalance(quantity)} ${unit.replace(/_/g, ' ').toLowerCase()}`;
+  return `${formatBalance(quantity)} ${unitName(unit, item).toLowerCase()}`;
 }
 
 /** A stock figure split for a big-number layout: the headline and the line under it. Feed gives
@@ -170,9 +176,9 @@ export function reorderGap(line: Pick<StockLine, 'balance'> & { item: Pick<Item,
 
 /** Units an item may be moved or used in: its base unit (factor 1), then every is_usable conversion.
  *  Mirrors the server's toBaseQuantity(..., "USABLE"), which refuses any other unit. */
-export function usableUnits(item: Pick<Item, 'unit' | 'itemUnits'>): { unit: string; factor: number }[] {
+export function usableUnits(item: Pick<Item, 'unit' | 'itemUnits'>): { unit: string; name: string; factor: number }[] {
   const extra = (item.itemUnits ?? [])
     .filter((u) => u.is_usable && u.unit !== item.unit && Number(u.factor_to_base) > 0)
-    .map((u) => ({ unit: u.unit, factor: Number(u.factor_to_base) }));
-  return [{ unit: item.unit, factor: 1 }, ...extra];
+    .map((u) => ({ unit: u.unit, name: unitName(u.unit, item), factor: Number(u.factor_to_base) }));
+  return [{ unit: item.unit, name: unitName(item.unit), factor: 1 }, ...extra];
 }

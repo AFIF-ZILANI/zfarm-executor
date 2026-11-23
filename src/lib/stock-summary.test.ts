@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 import {
   formatEntered,
+  unitName,
   usableUnits,
   attentionOrder,
   categoryCounts,
@@ -149,7 +150,7 @@ assert.equal(formatBalance(2.0), '2');
 console.log('stock-summary checks passed');
 
 // --- usable units: base first, then is_usable conversions only ------------------------------------------
-assert.deepEqual(usableUnits({ unit: 'KG' }), [{ unit: 'KG', factor: 1 }]);
+assert.deepEqual(usableUnits({ unit: 'KG' }), [{ unit: 'KG', name: 'Kg', factor: 1 }]);
 assert.deepEqual(
   usableUnits({
     unit: 'KG',
@@ -159,7 +160,7 @@ assert.deepEqual(
       { unit: 'KG', factor_to_base: '1', is_usable: true },
     ],
   }),
-  [{ unit: 'KG', factor: 1 }, { unit: 'BAG', factor: 50 }],
+  [{ unit: 'KG', name: 'Kg', factor: 1 }, { unit: 'BAG', name: 'Bag', factor: 50 }],
 );
 
 // Feed reads in bags, never bare kg.
@@ -178,3 +179,14 @@ assert.deepEqual(
 
 // A custom unit's code reads as words, not as a code.
 assert.equal(formatEntered(2, 'SMALL_BAG'), '2 small bag');
+// A renamed unit keeps its code, so the item's own list says what it's called now.
+{
+  const feed = {
+    unit: 'KG',
+    itemUnits: [{ unit: 'SMALL_BAG', factor_to_base: '25', is_usable: true, unitRef: { label: 'Choto Bag 12.5kg' } }],
+  } as unknown as Item;
+  assert.equal(unitName('SMALL_BAG', feed), 'Choto Bag 12.5kg');
+  assert.equal(unitName('SMALL_BAG', { unit: 'KG' }), 'Small bag');
+  assert.equal(formatEntered(2, 'SMALL_BAG', feed), '2 choto bag 12.5kg');
+  assert.equal(usableUnits(feed)[1]?.name, 'Choto Bag 12.5kg');
+}

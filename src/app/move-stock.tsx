@@ -125,7 +125,7 @@ export default function MoveStockScreen() {
     const left = onHand !== null ? stock(onHand - baseQty) : null;
     const converted = !bagged && unit && unit.factor !== 1 ? ` (${stock(baseQty)})` : '';
     Alert.alert(
-      `Move ${bagged ? stock(baseQty) : `${quantity} ${unitText(unit?.unit)}`} ${item?.name.toLowerCase()}?`,
+      `Move ${bagged ? stock(baseQty) : `${quantity} ${unit?.name.toLowerCase() ?? ''}`} ${item?.name.toLowerCase()}?`,
       `${source?.name} → ${dest?.name}${converted}.${left !== null ? ` ${source?.name} keeps ${left}.` : ''} A mistake needs a second move back.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -159,7 +159,7 @@ export default function MoveStockScreen() {
       hint="Feed, husk and other uncoded stock, by quantity. Returns to the warehouse too."
       dirty={!!item || !!quantity || !!note}
       submit={{
-        label: quantityNum > 0 && item ? `Move ${quantity} ${unitText(unit?.unit)}` : 'Move stock',
+        label: quantityNum > 0 && item ? `Move ${quantity} ${unit?.name.toLowerCase() ?? ''}` : 'Move stock',
         onPress: handleSubmit,
         disabled: !isValid,
         loading: submitting,
@@ -204,7 +204,7 @@ export default function MoveStockScreen() {
             <PillSelect
               options={units.map((u) => ({
                 value: u.unit,
-                label: u.factor === 1 ? humanise(u.unit) : `${humanise(u.unit)} · ${formatBalance(u.factor)} ${baseText}`,
+                label: u.factor === 1 ? u.name : `${u.name} · ${formatBalance(u.factor)} ${baseText}`,
               }))}
               value={unit?.unit ?? null}
               onChange={setUnitCode}
@@ -216,7 +216,7 @@ export default function MoveStockScreen() {
           label="Quantity"
           value={quantity}
           onChangeText={setQuantity}
-          unit={unit ? humanise(unit.unit) : undefined}
+          unit={unit?.name}
           warn={overStock}
           helper={
             onHand === null || !source
