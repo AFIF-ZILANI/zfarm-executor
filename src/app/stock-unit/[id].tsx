@@ -230,13 +230,13 @@ export default function StockUnitScreen() {
                     value={
                       p.lot.cost_per_unit
                         ? `${formatMoney(p.lot.cost_per_unit)} each`
-                        : `${formatMoney(p.lot.unit_price!)} per ${humanise(p.lot.unit).toLowerCase()}`
+                        : `${formatMoney(p.lot.unit_price!)} per ${(p.lot.unit_label ?? humanise(p.lot.unit)).toLowerCase()}`
                     }
                   />
                 ) : null}
                 <InfoRow
                   label="Lot"
-                  value={`${formatBalance(Number(p.lot.quantity))} ${humanise(p.lot.unit).toLowerCase()}${
+                  value={`${formatBalance(Number(p.lot.quantity))} ${(p.lot.unit_label ?? humanise(p.lot.unit)).toLowerCase()}${
                     p.lot.total_price ? ` · ${formatMoney(p.lot.total_price)}` : ''
                   }`}
                 />

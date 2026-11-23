@@ -88,6 +88,8 @@ export type ItemUnit = {
   /** Decimal string: 1 of `unit` = this many of Item.unit. */
   factor_to_base: string;
   is_usable: boolean;
+  /** The unit's current name; absent from servers before 2026-11-24 and on old cached data. */
+  unitRef?: { label: string };
 };
 
 export type TaskType = {
@@ -319,6 +321,8 @@ export type HouseCodedStock = {
   unit: string;
   /** What one coded unit is (BOTTLE) when they are all the same; null when mixed. */
   pack_unit: string | null;
+  /** pack_unit's current name; absent from older servers. */
+  pack_label?: string | null;
   units: number;
   /** Of `units`, how many are already opened (IN_USE) -- only asked for by "Use an item -> Consumed". */
   in_use?: number;
