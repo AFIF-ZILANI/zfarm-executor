@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { FormCard } from '@/components/ui/form-card';
@@ -9,6 +9,9 @@ import { BatchResolver, useResolvedBatch } from '@/components/ui/batch-resolver'
 import { NumberField } from '@/components/ui/number-field';
 import { TextField } from '@/components/ui/text-field';
 import { PickerField } from '@/components/ui/picker-field';
+import { PillSelect } from '@/components/ui/pill-select';
+import { AppText } from '@/components/ui/text';
+import { Spacing } from '@/constants/theme';
 import { useGetData, type Paginated } from '@/lib/api';
 import { openCasesIn, type DiseaseCase } from '@/lib/disease-cases';
 import { useSession } from '@/lib/session';
@@ -18,6 +21,19 @@ import { goBack } from '@/lib/nav';
 /** Warn past this share of the house's live birds. A fat-fingered 50 for 5 is
  *  the costly typo here, and this write decrements BatchHouseBalance for real.
  *  docs/layout/07-log-mortality.md. */
+/** Server MortalityCause: what the worker thinks killed the birds. Unknown is stored as null. */
+type MortalityCause = 'NATURAL' | 'INJURY' | 'ACCIDENT' | 'DISEASE' | 'WEAKNESS';
+
+// Unknown first, as the default: a guess the worker didn't make is worse than none.
+const CAUSE_OPTIONS: { value: MortalityCause | 'UNKNOWN'; label: string }[] = [
+  { value: 'UNKNOWN', label: 'Unknown' },
+  { value: 'NATURAL', label: 'Normal loss' },
+  { value: 'INJURY', label: 'Fighting or pecking' },
+  { value: 'ACCIDENT', label: 'Accident' },
+  { value: 'DISEASE', label: 'Sick' },
+  { value: 'WEAKNESS', label: 'Weak or unhealthy' },
+];
+
 const WARN_RATIO = 0.02;
 
 /** Queuing is instant, so the spinner and the tick are held long enough to be seen. */
@@ -37,6 +53,7 @@ export default function MortalityScreen() {
   const [house, setHouse] = usePrefillHouse(params.house_id);
   const [count, setCount] = useState('');
   const [causeNote, setCauseNote] = useState('');
+  const [cause, setCause] = useState<MortalityCause | 'UNKNOWN'>('UNKNOWN');
   const [pickedCase, setPickedCase] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -74,6 +91,8 @@ export default function MortalityScreen() {
           count_died: countNum,
           date: new Date().toISOString(),
           ...(causeNote.trim() && { cause_note: causeNote.trim() }),
+          // Unknown is stored as null, so it's simply left out.
+          ...(cause !== 'UNKNOWN' && { suspected_cause: cause }),
           ...(diseaseCaseId && { disease_case_id: diseaseCaseId }),
         },
         taskId: params.task_id,
@@ -108,7 +127,7 @@ export default function MortalityScreen() {
     <FormScreen
       title="Log mortality"
       hint="Deaths come off the house's live count."
-      dirty={!!count || !!causeNote}
+      dirty={!!count || !!causeNote || cause !== 'UNKNOWN'}
       submit={{
         label: done
           ? 'Recorded'
@@ -158,12 +177,22 @@ export default function MortalityScreen() {
             options={openCases}
             getKey={(c) => c.id}
             getLabel={(c) => c.disease.label}
-            onChange={(c) => setPickedCase(c.id)}
+            onChange={(c) => {
+              setPickedCase(c.id);
+              // Deaths put down to an outbreak died sick; don't override a cause already picked.
+              if (cause === 'UNKNOWN') setCause('DISEASE');
+            }}
             onClear={() => setPickedCase(null)}
           />
         ) : null}
+        <View style={styles.group}>
+          <AppText variant="eyebrow" color="muted">
+            Likely cause
+          </AppText>
+          <PillSelect options={CAUSE_OPTIONS} value={cause} onChange={setCause} />
+        </View>
         <TextField
-          label="Cause (optional)"
+          label="Details (optional)"
           placeholder="e.g. heat stress, crushed at the feeder"
           value={causeNote}
           onChangeText={setCauseNote}
@@ -173,3 +202,7 @@ export default function MortalityScreen() {
     </FormScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  group: { gap: Spacing.sm },
+});
