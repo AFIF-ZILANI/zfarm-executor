@@ -15,6 +15,7 @@ import {
   type Href,
 } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, focusManager } from '@tanstack/react-query';
@@ -113,6 +114,9 @@ export default function RootLayout() {
         <ThemeProvider value={colorScheme === 'dark' ? navDark : navLight}>
           {/* The ledger palette as CSS variables, so NativeWind classes resolve against the current scheme. */}
           <View style={[{ flex: 1 }, colorScheme === 'dark' ? DARK_VARS : LIGHT_VARS]}>
+            {/* Without it a release build kept Android's white status icons, unreadable on the light ground
+                (Expo Go set dark ones itself, which hid it). "auto" follows the app's light/dark choice. */}
+            <StatusBar style="auto" />
             <RootStack />
           </View>
         </ThemeProvider>
