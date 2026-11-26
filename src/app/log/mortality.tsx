@@ -189,7 +189,7 @@ export default function MortalityScreen() {
           <AppText variant="eyebrow" color="muted">
             Likely cause
           </AppText>
-          <PillSelect options={CAUSE_OPTIONS} value={cause} onChange={setCause} />
+          <PillSelect options={CAUSE_OPTIONS} value={cause} onChange={setCause} columns={2} />
         </View>
         <TextField
           label="Details (optional)"
