@@ -34,20 +34,20 @@ export function ProfileHeader({ employee }: { employee: Employee }) {
 
   return (
     <View style={[styles.hero, { backgroundColor: theme.surface }, elevation(scheme, 'card')]}>
-      {photo ? (
-        <Image
-          source={{ uri: photo }}
-          style={styles.avatar}
-          contentFit="cover"
-          accessibilityLabel={`${employee.profile.name}'s photo`}
-        />
-      ) : (
-        <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.primarySoft }]}>
-          <AppText variant="stat" color="primary">
-            {initials(employee.profile.name)}
-          </AppText>
-        </View>
-      )}
+      {/* Initials underneath, so a photo that won't load falls back to them instead of a blank circle. */}
+      <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.primarySoft }]}>
+        <AppText variant="stat" color="primary">
+          {initials(employee.profile.name)}
+        </AppText>
+        {photo ? (
+          <Image
+            source={{ uri: photo }}
+            style={[StyleSheet.absoluteFill, styles.avatar]}
+            contentFit="cover"
+            accessibilityLabel={`${employee.profile.name}'s photo`}
+          />
+        ) : null}
+      </View>
 
       <AppText variant="h1" style={styles.centre}>
         {employee.profile.name}

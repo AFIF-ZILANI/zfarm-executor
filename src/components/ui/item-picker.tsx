@@ -32,7 +32,7 @@ export function ItemPicker({
   if (unitTracked !== undefined) params.set('is_unit_tracked', String(unitTracked));
   if (category !== undefined) params.set('category', category);
 
-  const { data, isLoading } = useGetAllPages<Item>(`/items?${params.toString()}`, [
+  const { data, isLoading, isError, refetch } = useGetAllPages<Item>(`/items?${params.toString()}`, [
     'items',
     unitTracked ?? 'all',
     category ?? 'all',
@@ -48,6 +48,7 @@ export function ItemPicker({
       getSubLabel={(i) => humanise(i.category)}
       onChange={onChange}
       loading={isLoading}
+      onRetry={isError && !data ? () => void refetch() : undefined}
       error={error}
       onClear={onClear}
       placeholder={placeholder}

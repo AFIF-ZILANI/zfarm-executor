@@ -95,6 +95,7 @@ export default function UseSuppliesScreen() {
         label: quantityNum > 0 && item ? `Use ${bagged ? stock(baseQty) : `${quantity} ${unit?.name.toLowerCase() ?? ''}`} ${item.name.toLowerCase()}` : 'Use supplies',
         onPress: handleSubmit,
         disabled: !isValid,
+        reason: !house ? 'Pick a house first.' : !item ? 'Pick an item.' : !(quantityNum > 0) ? 'Enter the quantity.' : undefined,
         loading: submitting,
       }}
     >

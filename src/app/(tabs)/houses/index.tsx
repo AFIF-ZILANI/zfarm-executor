@@ -13,14 +13,13 @@ import { AppText } from '@/components/ui/text';
 import { useHouseOptions } from '@/components/ui/house-picker';
 import { Radius, Size, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useGetData, type Paginated } from '@/lib/api';
+import { useAllBalances } from '@/lib/queries';
 import {
   buildHouseLines,
   filterHouses,
   summarizeHouses,
   type HouseFilter,
 } from '@/lib/houses-summary';
-import type { BatchHouseBalance } from '@/lib/types';
 
 const FILTERS: { value: HouseFilter; label: string }[] = [
   { value: 'ALL', label: 'All' },
@@ -35,10 +34,7 @@ export default function HousesScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const houses = useHouseOptions();
-  const balances = useGetData<Paginated<BatchHouseBalance>>(
-    '/batch-house-balances?limit=100',
-    ['batch-house-balances', 'all'],
-  );
+  const balances = useAllBalances();
 
   const lines = useMemo(
     // Spatial order (by house number), never by status: a worker's model of the farm is spatial.

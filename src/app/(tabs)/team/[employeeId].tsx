@@ -21,6 +21,7 @@ import { formatSignedPoints } from '@/lib/format';
 import { formatDate as formatProfileDate } from '@/lib/profile-format';
 import { groupTasks } from '@/lib/tasks-view';
 import type { Employee, ScoreEntry, TaskAssignment } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 const REFRESH_TIMEOUT_MS = 6000;
 
@@ -39,7 +40,7 @@ export default function EmployeeDetailScreen() {
   const theme = useTheme();
   const { employee: actor } = useSession();
   // Held in state: new Date() during render is impure, and the day's bounds need one stable "now".
-  const [now] = useState(() => new Date());
+  const [now] = useNow();
   const { from, to } = monthRange(now);
   const [refreshing, setRefreshing] = useState(false);
   const [allTasks, setAllTasks] = useState(false);

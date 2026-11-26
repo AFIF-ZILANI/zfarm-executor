@@ -2,7 +2,7 @@
 // NativeWind's JSX here so the root view's `vars()` (the ledger palette) reach the NativeWind screens.
 import '../../global.css';
 import { useEffect, useState } from 'react';
-import { View, useColorScheme } from 'react-native';
+import { AppState, View, useColorScheme } from 'react-native';
 import { vars } from 'nativewind';
 import { applyAppearance, loadAppearance } from '@/lib/appearance';
 import {
@@ -17,7 +17,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, focusManager } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 
@@ -28,6 +28,13 @@ import { initOutbox } from '@/lib/outbox';
 import { useOutboxTriggers } from '@/lib/use-outbox';
 
 SplashScreen.preventAutoHideAsync();
+
+// React Native has no window focus event, so React Query never refetched when the app came back to the front:
+// a worker opening it in the morning saw yesterday's figures. AppState is the phone's version of focus.
+focusManager.setEventListener((setFocused) => {
+  const sub = AppState.addEventListener('change', (state) => setFocused(state === 'active'));
+  return () => sub.remove();
+});
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, gcTime: 1000 * 60 * 60 * 24 } },

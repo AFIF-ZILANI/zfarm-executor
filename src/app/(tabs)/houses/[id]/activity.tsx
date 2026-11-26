@@ -15,6 +15,7 @@ import { Spacing } from '@/constants/theme';
 import { apiFetch, useGetData, type Paginated } from '@/lib/api';
 import { activityTime, groupByDay, type ActivityEntry } from '@/lib/house-activity';
 import type { House } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 const PAGE = 30;
 
@@ -22,7 +23,7 @@ const PAGE = 30;
 export default function HouseActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   // Read once per mount and on pull-down: `new Date()` during render is impure.
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useNow();
   const [refreshing, setRefreshing] = useState(false);
   const onFix = useFixUsage();
 

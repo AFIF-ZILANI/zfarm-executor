@@ -41,6 +41,9 @@ export default function LoginScreen() {
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Header title="Sign in" />
+        <AppText variant="body" color="muted">
+          ZFarm Executor, the field app for ZeroD Farms staff.
+        </AppText>
 
         {expired ? (
           <AppText variant="body" color="muted" style={styles.notice}>
@@ -67,6 +70,7 @@ export default function LoginScreen() {
               secureTextEntry
               autoCapitalize="none"
               autoComplete="current-password"
+              returnKeyType="go"
               error={error || undefined}
               onSubmitEditing={() => canSubmit && void submit()}
             />

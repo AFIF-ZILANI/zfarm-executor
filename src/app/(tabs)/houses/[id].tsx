@@ -26,6 +26,7 @@ import { activityStamp } from '@/lib/house-activity';
 import { nextVaccine, type VaccineScheduleRow } from '@/lib/vaccine-schedule';
 import { VaccineRow } from '@/components/vaccine-row';
 import type { BatchHouseBalance, House, TaskAssignment } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 type Dated = { id: string; date?: string; recorded_at?: string };
 
@@ -55,7 +56,7 @@ export default function HouseDetailScreen() {
   const { width } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   // Read once and refreshed on pull-down: new Date() during render is impure.
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useNow();
   const [refreshing, setRefreshing] = useState(false);
 
   const houseQ = useGetData<House>(`/houses/${id}`, ['houses', id]);
@@ -213,6 +214,34 @@ export default function HouseDetailScreen() {
                   />
                 ))}
               </View>
+            </>
+          ) : null}
+
+          {/* Stock actions straight after the record tiles, above everything that loads late (vaccines,
+              activity): they used to render first and then jump down under the worker's thumb. */}
+          <AppText variant="eyebrow" color="muted" style={styles.section}>
+            Stock
+          </AppText>
+          <View style={styles.shortcuts}>
+            <ShortcutTile
+              label="Move to house"
+              icon="arrow-right"
+              onPress={() => router.push(withHouse('/scan/allocate'))}
+            />
+            <ShortcutTile
+              label="Use an item"
+              icon="box"
+              onPress={() => router.push(withHouse('/scan/consume'))}
+            />
+            <ShortcutTile
+              label="Use supplies"
+              icon="package"
+              onPress={() => router.push(withHouse('/use-supplies'))}
+            />
+          </View>
+
+          {running ? (
+            <>
               {/* Treatments are per batch, so the plan opens for the batch in this house, not the house. */}
               {vaccineRows.length && balance?.batch ? (
                 <Card
@@ -249,27 +278,6 @@ export default function HouseDetailScreen() {
           ) : null}
 
           <HouseActivityCard houseId={id} results={activity.data?.results} stamp={(e) => activityStamp(e, now)} />
-
-          <AppText variant="eyebrow" color="muted" style={styles.section}>
-            Stock
-          </AppText>
-          <View style={styles.shortcuts}>
-            <ShortcutTile
-              label="Move to house"
-              icon="arrow-right"
-              onPress={() => router.push(withHouse('/scan/allocate'))}
-            />
-            <ShortcutTile
-              label="Use an item"
-              icon="box"
-              onPress={() => router.push(withHouse('/scan/consume'))}
-            />
-            <ShortcutTile
-              label="Use supplies"
-              icon="package"
-              onPress={() => router.push(withHouse('/use-supplies'))}
-            />
-          </View>
 
           {/* Each omitted entirely until there is something to show. What's here now, then what was used. */}
           <HouseUnitsCard houseId={id} section="sealed" />

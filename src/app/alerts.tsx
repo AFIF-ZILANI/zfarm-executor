@@ -29,6 +29,7 @@ import {
   type LevelFilter,
 } from '@/lib/alerts-view';
 import { ApiError, apiFetch, useGetData, type Paginated } from '@/lib/api';
+import { useActiveAlerts } from '@/lib/queries';
 import { can } from '@/lib/permissions';
 import { useSeenAlerts } from '@/lib/use-seen-alerts';
 import { formatRelative } from '@/lib/format';
@@ -180,7 +181,7 @@ export default function AlertsScreen() {
   const [showResolved, setShowResolved] = useState(false);
 
   // Same URL and key as Home's bell, so the cache is shared and the badge and list agree.
-  const active = useGetData<Paginated<FarmAlert>>('/alerts?status=ACTIVE&limit=50', ['alerts', 'active']);
+  const active = useActiveAlerts();
   const resolved = useGetData<Paginated<FarmAlert>>('/alerts?status=RESOLVED&limit=20', ['alerts', 'resolved']);
 
   const activeAll = sortAlerts(active.data?.results ?? []);

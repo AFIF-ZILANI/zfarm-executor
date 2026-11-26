@@ -92,6 +92,15 @@ export default function TreatmentScreen() {
         label: isVaccination ? 'Record vaccination' : 'Record medication',
         onPress: handleSubmit,
         disabled: !isValid,
+        reason: !house
+          ? 'Pick a house first.'
+          : !balance
+            ? undefined
+            : name.trim() === ''
+              ? `Enter the ${isVaccination ? 'vaccine' : 'medicine'} name.`
+              : !dosageValid
+                ? `Enter the ${isVaccination ? 'dose' : 'dosage'}.`
+                : undefined,
         loading: submitting,
       }}
     >

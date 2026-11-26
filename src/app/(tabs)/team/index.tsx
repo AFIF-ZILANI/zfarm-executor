@@ -22,6 +22,7 @@ import { monthRange } from '@/lib/farm';
 import { humanise } from '@/lib/profile-format';
 import { countByFilter, filterTeam, summarizeTeam, taskStatusLine, type MemberStat, type TeamFilter } from '@/lib/team-view';
 import type { Employee, ScoreEntry, TaskAssignment } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 const REFRESH_TIMEOUT_MS = 6000;
 
@@ -97,7 +98,7 @@ export default function TeamScreen() {
   const theme = useTheme();
   const { employee: actor } = useSession();
   // Held in state: new Date() during render is impure, and the overdue test needs one stable "now".
-  const [now] = useState(() => new Date());
+  const [now] = useNow();
   const { from, to } = monthRange(now);
   const [filter, setFilter] = useState<TeamFilter>('ALL');
   const [refreshing, setRefreshing] = useState(false);

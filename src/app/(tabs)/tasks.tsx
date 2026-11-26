@@ -19,6 +19,7 @@ import { formatTime } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { dueLabel, groupTasks, taskHref } from '@/lib/tasks-view';
 import type { TaskAssignment } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 const REFRESH_TIMEOUT_MS = 6000;
 const DONE_SHOWN = 20;
@@ -28,7 +29,7 @@ export default function MyTasksScreen() {
   const theme = useTheme();
   const { employee, signedIn } = useSession();
   // Held in state (new Date() during render is impure) and refreshed on pull-down.
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useNow();
   const [refreshing, setRefreshing] = useState(false);
 
   // Two queries: the server lists oldest-due first, so one mixed page of old Done rows could push
@@ -86,7 +87,7 @@ export default function MyTasksScreen() {
             </View>
             <AppText variant="caption" color={kind === 'overdue' ? 'critical' : 'muted'}>
               {kind === 'done'
-                ? `Done · ${dueLabel(task.completed_at ?? task.due_at, now)}`
+                ? dueLabel(task.completed_at ?? task.due_at, now)
                 : `${dueLabel(task.due_at, now)} · ${formatTime(task.due_at)}`}
               {task.location_note ? ` · ${task.location_note}` : ''}
             </AppText>

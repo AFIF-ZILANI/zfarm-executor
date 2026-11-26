@@ -12,7 +12,7 @@ type BatchPickerProps = {
  *  screens that act on a batch directly rather than resolving one from a
  *  house. */
 export function BatchPicker({ value, onChange, error }: BatchPickerProps) {
-  const { data, isLoading } = useGetData<Paginated<Batch>>('/batches?status=RUNNING&limit=100', [
+  const { data, isLoading, isError, refetch } = useGetData<Paginated<Batch>>('/batches?status=RUNNING&limit=100', [
     'batches',
     'running',
   ]);
@@ -27,6 +27,7 @@ export function BatchPicker({ value, onChange, error }: BatchPickerProps) {
       getSubLabel={(b) => b.breed}
       onChange={onChange}
       loading={isLoading}
+      onRetry={isError && !data ? () => void refetch() : undefined}
       error={error}
       emptyLabel="No running batches."
     />

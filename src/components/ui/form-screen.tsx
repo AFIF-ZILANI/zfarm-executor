@@ -23,6 +23,7 @@ type FormScreenProps = {
     loading?: boolean;
     icon?: IconName;
     secondary?: { label: string; onPress: () => void };
+    reason?: string;
   };
   /** Set when any field has been touched — closing then confirms the discard.
    *  No dialog on an untouched form. docs/layout/07-log-mortality.md. */

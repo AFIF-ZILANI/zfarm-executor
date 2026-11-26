@@ -30,6 +30,7 @@ import {
   usageTitle,
   type UnitProfile,
 } from '@/lib/unit-profile';
+import { useNow } from '@/lib/use-now';
 
 const TONE: Record<'success' | 'info' | 'warning' | 'critical' | 'neutral', { fg: ThemeColor; bg: ThemeColor }> = {
   success: { fg: 'success', bg: 'tintGreen' },
@@ -47,7 +48,7 @@ const stamp = (iso: string) => `${formatDate(iso) ?? ''} · ${formatTime(iso)}`;
 export default function StockUnitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useNow();
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
   const q = useGetData<UnitProfile>(`/stock-units/${id}/profile`, ['stock-unit-profile', id]);

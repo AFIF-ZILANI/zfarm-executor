@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Size, Spacing, elevation } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -37,6 +38,9 @@ type PickerFieldProps<T> = {
   disabled?: boolean;
   /** For an optional field: shows a × that puts it back to nothing. */
   onClear?: () => void;
+  /** Set when the options failed to load: the sheet says so, with a retry, instead of the empty label
+   *  ("No active houses." while offline sent workers looking for houses that do exist). */
+  onRetry?: () => void;
 };
 
 /**
@@ -60,6 +64,7 @@ export function PickerField<T>({
   emptyLabel = 'Nothing to choose from.',
   disabled,
   onClear,
+  onRetry,
 }: PickerFieldProps<T>) {
   const theme = useTheme();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
@@ -153,6 +158,13 @@ export function PickerField<T>({
 
           {loading ? (
             <ActivityIndicator style={styles.loading} color={theme.muted} />
+          ) : onRetry && options.length === 0 ? (
+            <View style={styles.empty}>
+              <AppText variant="body" color="muted">
+                {"Couldn't load the list. Check your connection."}
+              </AppText>
+              <Button variant="secondary" label="Try again" icon="refresh-cw" onPress={onRetry} block={false} />
+            </View>
           ) : filtered.length === 0 ? (
             <AppText variant="body" color="muted" style={styles.empty}>
               {emptyLabel}
@@ -243,5 +255,5 @@ const styles = StyleSheet.create({
   },
   rule: { height: 1, marginLeft: Spacing.xl },
   loading: { padding: Spacing.xxl },
-  empty: { padding: Spacing.xl },
+  empty: { padding: Spacing.xl, gap: Spacing.md },
 });
