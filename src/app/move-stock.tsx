@@ -75,8 +75,9 @@ export default function MoveStockScreen() {
       : null;
 
   const units = item ? usableUnits(item) : [];
-  // Falls back to the base unit when nothing (or a unit of the previous item) is picked.
-  const unit = units.find((u) => u.unit === unitCode) ?? units[0] ?? null;
+  // Nothing (or a unit of the previous item) picked: feed moves by the bag, so start on Bag, else the base
+  // unit. Same rule as Use supplies.
+  const unit = units.find((u) => u.unit === unitCode) ?? units.find((u) => u.unit === 'BAG') ?? units[0] ?? null;
   const unitText = (code: string | undefined) => (code ? humanise(code).toLowerCase() : '');
   const baseText = unitText(item?.unit);
   // Feed (anything kept in bags) reads "X Bag Y kg"; everything else as a number and its unit.
@@ -164,7 +165,11 @@ export default function MoveStockScreen() {
       hint="Feed, husk and other uncoded stock, by quantity. Returns to the warehouse too."
       dirty={!!item || !!quantity || !!note}
       submit={{
-        label: quantityNum > 0 && item ? `Move ${quantity} ${unit?.name.toLowerCase() ?? ''}` : 'Move stock',
+        // Names the amount and the item, like Use supplies: "Move 3 Bag broiler feed".
+        label:
+          quantityNum > 0 && item
+            ? `Move ${bagged ? stock(baseQty) : `${quantity} ${unit?.name.toLowerCase() ?? ''}`} ${item.name.toLowerCase()}`
+            : 'Move supplies',
         onPress: handleSubmit,
         disabled: !isValid,
         loading: submitting,
