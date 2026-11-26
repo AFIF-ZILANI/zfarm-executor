@@ -52,6 +52,11 @@ export default function MoveStockScreen() {
   const houses = useHouseOptions();
   const stockRows = useGetData<StockRow[]>('/items/stock-by-location', ['items', 'stock-by-location']);
 
+  // Only what can actually be moved: items holding stock somewhere. Chicks are birds, moved with Move birds.
+  const inStock = new Set(
+    (stockRows.data ?? []).filter((r) => (Number(r.balance) || 0) > 0).map((r) => r.item_id),
+  );
+
   const places: Place[] = [
     ...(warehouses.data?.results ?? []).map((w) => ({ type: 'WAREHOUSE' as const, id: w.id, name: w.name })),
     ...(houses.data?.results ?? []).map((h) => ({ type: 'HOUSE' as const, id: h.id, name: h.name })),
@@ -173,6 +178,9 @@ export default function MoveStockScreen() {
             setUnitCode(null);
           }}
           unitTracked={false}
+          filter={(i) => i.category !== 'CHICKS' && inStock.has(i.id)}
+          filterLoading={stockRows.isLoading}
+          emptyLabel="Nothing in stock to move."
         />
       </FormCard>
 
