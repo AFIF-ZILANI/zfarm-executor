@@ -165,11 +165,8 @@ export default function MoveStockScreen() {
       hint="Feed, husk and other uncoded stock, by quantity. Returns to the warehouse too."
       dirty={!!item || !!quantity || !!note}
       submit={{
-        // Names the amount and the item, like Use supplies: "Move 3 Bag broiler feed".
-        label:
-          quantityNum > 0 && item
-            ? `Move ${bagged ? stock(baseQty) : `${quantity} ${unit?.name.toLowerCase() ?? ''}`} ${item.name.toLowerCase()}`
-            : 'Move supplies',
+        // The amount as typed, in the unit picked, no item name: "Move 3 Bag", "Move 20 Kg".
+        label: quantityNum > 0 && item ? `Move ${quantity} ${unit?.name ?? ''}`.trim() : 'Move supplies',
         onPress: handleSubmit,
         disabled: !isValid,
         loading: submitting,
