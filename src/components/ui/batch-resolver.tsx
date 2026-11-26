@@ -1,16 +1,20 @@
-import { View, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useQueryClient } from '@tanstack/react-query';
+
 import { useGetData, type Paginated } from '@/lib/api';
 import { pickLiveBalance } from '@/lib/batch-balance';
 import { formatBatchCode } from '@/lib/format';
 import { dayOfCycle } from '@/lib/farm';
 import { humanise } from '@/lib/profile-format';
 import type { BatchHouseBalance } from '@/lib/types';
+
+const ALL_BALANCES_KEY = ['batch-house-balances', 'all'];
 
 /**
  * GET /batch-house-balances?house_id=X is the batch lookup for every form
@@ -22,12 +26,29 @@ import type { BatchHouseBalance } from '@/lib/types';
  * `pickLiveBalance` takes the first row with birds in it.
  */
 export function useResolvedBatch(houseId: string | undefined) {
-  const { data, isLoading } = useGetData<Paginated<BatchHouseBalance>>(
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError, refetch } = useGetData<Paginated<BatchHouseBalance>>(
     `/batch-house-balances?house_id=${houseId ?? ''}&limit=20`,
     ['batch-house-balances', houseId ?? 'none'],
-    { enabled: !!houseId },
+    {
+      enabled: !!houseId,
+      // Offline, a house not opened before had nothing cached, and the form said "No batch in this house":
+      // no logging in a shed without signal. The farm-wide list Home and Houses keep cached already holds
+      // this house's rows, so start from those (dated as that list, so it still refetches when it can).
+      initialData: () => {
+        const all = queryClient.getQueryData<Paginated<BatchHouseBalance>>(ALL_BALANCES_KEY);
+        const rows = all?.results.filter((b) => b.house_id === houseId);
+        return all && rows?.length ? { ...all, results: rows, total: rows.length } : undefined;
+      },
+      initialDataUpdatedAt: () => queryClient.getQueryState(ALL_BALANCES_KEY)?.dataUpdatedAt,
+    },
   );
-  return { balance: pickLiveBalance(data?.results), isLoading: !!houseId && isLoading };
+  return {
+    balance: pickLiveBalance(data?.results),
+    isLoading: !!houseId && isLoading,
+    failed: !!houseId && isError && !data,
+    retry: () => void refetch(),
+  };
 }
 
 /**
@@ -38,7 +59,7 @@ export function useResolvedBatch(houseId: string | undefined) {
  */
 export function BatchResolver({ houseId }: { houseId: string | undefined }) {
   const theme = useTheme();
-  const { balance, isLoading } = useResolvedBatch(houseId);
+  const { balance, isLoading, failed, retry } = useResolvedBatch(houseId);
 
   if (!houseId) {
     return (
@@ -55,6 +76,27 @@ export function BatchResolver({ houseId }: { houseId: string | undefined }) {
       <View style={[styles.block, { backgroundColor: theme.surfaceAlt }]}>
         <Skeleton width="60%" height={18} />
       </View>
+    );
+  }
+
+  // Not knowing is not the same as "no batch": say the lookup failed and offer another go.
+  if (failed) {
+    return (
+      <Pressable
+        onPress={retry}
+        accessibilityRole="button"
+        accessibilityLabel="Couldn't load this house's flock. Tap to try again."
+        style={[styles.block, styles.row, { backgroundColor: theme.tintAmber }]}
+      >
+        <Icon name="wifi-off" size={20} color="warning" />
+        <View style={styles.flex}>
+          <AppText variant="bodyStrong">{"Couldn't load this house's flock"}</AppText>
+          <AppText variant="caption" color="muted">
+            Check your connection, then tap to try again.
+          </AppText>
+        </View>
+        <Icon name="refresh-cw" size={20} color="muted" />
+      </Pressable>
     );
   }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -31,6 +31,7 @@ import {
 import { useSession } from '@/lib/session';
 import { useLogout } from '@/lib/use-logout';
 import type { Employee } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 type ScoreEntry = { id: string; points: number; employee_id: string };
 
@@ -39,7 +40,7 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const { employee: saved, signedIn, refresh } = useSession();
   // Read once: calling new Date() during render is impure (the React Compiler rejects it).
-  const [now] = useState(() => new Date());
+  const [now] = useNow();
   const { from, to } = useMemo(() => monthRange(now), [now]);
 
   // The copy saved at login shows at once; the fresh fetch replaces it. Offline keeps the saved copy.

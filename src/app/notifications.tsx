@@ -20,6 +20,7 @@ import { groupNotifications, notificationHref, notificationLook, unreadCount } f
 import { useSession } from '@/lib/session';
 import { NOTIFICATIONS_KEY, UNREAD_KEY } from '@/lib/use-unread-notifications';
 import type { AppNotification } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 const REFRESH_TIMEOUT_MS = 6000;
 
@@ -31,7 +32,7 @@ export default function NotificationsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   // Held in state: new Date() during render is impure, and grouping needs one stable "now".
-  const [now] = useState(() => new Date());
+  const [now] = useNow();
 
   const list = useGetData<Paginated<AppNotification>>('/notifications?limit=50', NOTIFICATIONS_KEY, {
     enabled: signedIn,

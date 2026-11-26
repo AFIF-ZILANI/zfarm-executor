@@ -28,6 +28,7 @@ import {
   type Range,
 } from '@/lib/stock-history';
 import type { House, HouseAllocation, HouseConsumption, Item, StockActivitySummary } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 export type StockKind = 'allocated' | 'used';
 
@@ -142,7 +143,7 @@ export function StockHistoryScreen({ kind }: { kind: StockKind }) {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   // Read once per mount and on pull-down: `new Date()` during render is impure.
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useNow();
   const [range, setRange] = useState<Range>('all');
   const [type, setType] = useState<TypeFilter>('all');
   const [item, setItem] = useState<Item | null>(null);

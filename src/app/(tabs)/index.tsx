@@ -1,28 +1,33 @@
 /** @jsxImportSource nativewind */
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, type Href } from 'expo-router';
-import { Image } from 'expo-image';
 import Feather from '@expo/vector-icons/Feather';
 
 import { SyncBanner } from '@/components/ui/sync-banner';
 import { UpdateBanner } from '@/components/ui/update-banner';
 import { FeatureGrid } from '@/components/feature-grid';
+import { Avatar } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/lib/session';
 import { can } from '@/lib/permissions';
 import { useGetData, type Paginated } from '@/lib/api';
+import { useActiveAlerts, useAllBalances } from '@/lib/queries';
+import { useNow } from '@/lib/use-now';
+import { triggerFlush } from '@/lib/use-outbox';
+import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, unseenAlerts } from '@/lib/alerts-view';
 import { useSeenAlerts } from '@/lib/use-seen-alerts';
 import { useUnreadNotifications } from '@/lib/use-unread-notifications';
-import { dueLabel, groupTasks, taskHref } from '@/lib/tasks-view';
+import { doneToday, dueLabel, groupTasks, taskHref } from '@/lib/tasks-view';
 import { formatSignedPoints, formatTime } from '@/lib/format';
 import { cycleProgress } from '@/lib/houses-summary';
 import { humanise } from '@/lib/profile-format';
 import { summarizeTeam, taskStatusLine, type MemberStat } from '@/lib/team-view';
-import { dayOfCycle, expectedCycleDays, houseToken, initials, monthRange } from '@/lib/farm';
-import type { BatchHouseBalance, Employee, FarmAlert, TaskAssignment } from '@/lib/types';
+import { dayOfCycle, expectedCycleDays, houseToken, monthRange } from '@/lib/farm';
+import type { BatchHouseBalance, Employee, TaskAssignment } from '@/lib/types';
 
 // Home is the first screen in the Hisab Khata system (tailwind.config.js): styled with NativeWind classes, and
 // built from its own markup rather than the shared cards, so the other screens keep their look until they move too.
@@ -43,11 +48,27 @@ const compactCount = (n: number) =>
 const TONE_TEXT = { critical: 'text-error', ink: 'text-ink', success: 'text-success', muted: 'text-muted' } as const;
 
 /** The shell: ledger-paper ground, safe area on top, one scrolling column. */
-function Page({ children }: { children: ReactNode }) {
+function Page({ children, onRefresh }: { children: ReactNode; onRefresh?: () => Promise<unknown> }) {
+  const theme = useTheme();
+  const [refreshing, setRefreshing] = useState(false);
+  const pull = async () => {
+    setRefreshing(true);
+    // Offline a refetch can hang on the network for a long time: never hold the spinner past a few seconds.
+    await Promise.race([onRefresh?.().catch(() => undefined), new Promise((ok) => setTimeout(ok, 8000))]);
+    setRefreshing(false);
+  };
   return (
     <View className="flex-1 bg-background">
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView contentContainerClassName="px-4 pb-10" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerClassName="px-4 pb-10"
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl refreshing={refreshing} onRefresh={() => void pull()} tintColor={theme.primary} colors={[theme.primary]} />
+            ) : undefined
+          }
+        >
           {children}
         </ScrollView>
       </SafeAreaView>
@@ -108,16 +129,6 @@ function Rule() {
   return <View className="w-px bg-line" />;
 }
 
-function Person({ name, uri }: { name: string; uri?: string | null }) {
-  return uri ? (
-    <Image source={{ uri }} style={{ width: 40, height: 40, borderRadius: 20 }} contentFit="cover" accessibilityLabel={`${name}'s photo`} />
-  ) : (
-    <View className="h-avatar w-avatar items-center justify-center rounded-full bg-primary/10">
-      <Text className="font-body-semibold text-label text-primary">{initials(name)}</Text>
-    </View>
-  );
-}
-
 /** One person on the team: who they are, what is left of their day, and how their month is going. */
 function TeamRow({ stat, last }: { stat: MemberStat; last: boolean }) {
   const { member } = stat;
@@ -130,7 +141,7 @@ function TeamRow({ stat, last }: { stat: MemberStat; last: boolean }) {
       accessibilityLabel={`${member.profile.name}, ${humanise(member.role)}, ${status.text}, ${stat.points} points this month`}
       className={`min-h-row flex-row items-center gap-4 px-4 py-2 active:bg-background ${last ? '' : 'border-b border-line'}`}
     >
-      <Person name={member.profile.name} uri={member.profile.avatar?.image_url} />
+      <Avatar name={member.profile.name} uri={member.profile.avatar?.image_url} />
       <View className="flex-1">
         <Text className="font-body-semibold text-body text-ink" numberOfLines={1}>
           {member.profile.name}
@@ -194,33 +205,36 @@ function HouseRow({ balance, last }: { balance: BatchHouseBalance; last: boolean
 export default function DashboardScreen() {
   const theme = useTheme();
   const { employee, isLoading, refresh } = useSession();
+  const queryClient = useQueryClient();
   const isManager = can(employee?.role, 'assign_task');
-  // Held in state: new Date() during render is impure, and groupTasks needs one stable "now".
-  const [now] = useState(() => new Date());
-  const { from, to } = useMemo(() => monthRange(new Date()), []);
+  // One stable "now" for groupTasks, moved on when Home comes into view or the app returns to the front.
+  const [now, setNow] = useNow();
+  const { from, to } = useMemo(() => monthRange(now), [now]);
+  const day = now.toDateString();
 
   const endOfToday = useMemo(() => {
-    const d = new Date();
+    const d = new Date(day);
     d.setHours(23, 59, 59, 999);
     return d.toISOString();
-  }, []);
+  }, [day]);
 
-  const { data: tasks } = useGetData<Paginated<TaskAssignment>>(
+  // The day is in the key: a new day is a new list, not yesterday's shown until the refetch lands.
+  const tasksQ = useGetData<Paginated<TaskAssignment>>(
     `/task-assignments?employee_id=${employee?.id ?? ''}&due_to=${endOfToday}&limit=50`,
-    ['task-assignments', 'today', employee?.id ?? 'none'],
+    ['task-assignments', 'today', employee?.id ?? 'none', day],
     { enabled: !!employee },
   );
 
-  const { data: balances } = useGetData<Paginated<BatchHouseBalance>>(
-    '/batch-house-balances?limit=50',
-    ['batch-house-balances', 'all'],
-  );
+  const tasks = tasksQ.data;
+  const balancesQ = useAllBalances();
+  const balances = balancesQ.data;
 
-  const { data: scores } = useGetData<Paginated<ScoreEntry>>(
+  const scoresQ = useGetData<Paginated<ScoreEntry>>(
     `/performance-score-entries?employee_id=${employee?.id ?? ''}&date_from=${from}&date_to=${to}&status=ACTIVE&limit=100`,
-    ['performance-score-entries', 'mtd', employee?.id ?? 'none'],
+    ['performance-score-entries', 'mtd', employee?.id ?? 'none', from],
     { enabled: !!employee },
   );
+  const scores = scoresQ.data;
 
   // A manager's team card: everyone's tasks due by tonight and everyone's points this month. Same URLs and
   // keys as the Team screen, so the two share one cache.
@@ -229,7 +243,7 @@ export default function DashboardScreen() {
   });
   const { data: teamTasks } = useGetData<Paginated<TaskAssignment>>(
     `/task-assignments?due_to=${endOfToday}&limit=100`,
-    ['task-assignments', 'team-today'],
+    ['task-assignments', 'team-today', day],
     { enabled: isManager },
   );
   const { data: teamScores } = useGetData<Paginated<ScoreEntry>>(
@@ -239,7 +253,7 @@ export default function DashboardScreen() {
   );
 
   // Same URL and key as the Alerts screen, so the bell badge and the list agree.
-  const { data: activeAlerts } = useGetData<Paginated<FarmAlert>>('/alerts?status=ACTIVE&limit=50', ['alerts', 'active']);
+  const { data: activeAlerts, refetch: refetchAlerts } = useActiveAlerts();
   const alertSummary = summarizeAlerts(activeAlerts?.results ?? [], activeAlerts?.total);
   // The bell counts only what this person hasn't opened the Alerts screen on yet; the strip below keeps the full total.
   const { seen } = useSeenAlerts();
@@ -274,8 +288,9 @@ export default function DashboardScreen() {
   const pendingCount = groups.overdue.length + groups.today.length;
   // Overdue first, then what is still due today, then what is finished — a worker wants proof of
   // what they finished, but never above what is left. docs/layout/01-dashboard.md.
-  const ordered = [...groups.overdue, ...groups.today, ...groups.done].slice(0, 5);
-  const doneCount = groups.done.length;
+  const finished = doneToday(groups.done, now);
+  const ordered = [...groups.overdue, ...groups.today, ...finished].slice(0, 5);
+  const doneCount = finished.length;
   const total = pendingCount + doneCount;
 
   const points = (scores?.results ?? []).reduce((sum, s) => sum + s.points, 0);
@@ -289,6 +304,18 @@ export default function DashboardScreen() {
     employee.id,
   );
 
+  // Until the first answer, figures are unknown, not zero: "0 Tasks left" and "Nothing assigned today"
+  // while loading told a worker their day was empty.
+  const tasksUnknown = !tasks;
+  const tasksFailed = tasksQ.isError && !tasks;
+  const figure = (value: string, known: boolean) => (known ? value : '–');
+
+  // Pull-down means "sync now" to a worker: send anything queued as well as reloading the figures.
+  const refreshAll = () => {
+    setNow(new Date());
+    return Promise.allSettled([triggerFlush(queryClient), tasksQ.refetch(), balancesQ.refetch(), scoresQ.refetch(), refetchAlerts(), refresh()]);
+  };
+
   const openTask = (task: TaskAssignment) => {
     router.push(taskHref(task) as Href);
   };
@@ -296,7 +323,7 @@ export default function DashboardScreen() {
   const badge = newAlerts + unreadNotifications;
 
   return (
-    <Page>
+    <Page onRefresh={refreshAll}>
       {/* Greeting and the one inbox bell. */}
       <View className="mt-4 flex-row items-start justify-between gap-4">
         <View className="flex-1">
@@ -330,16 +357,16 @@ export default function DashboardScreen() {
       {/* The day in three figures, ruled like ledger columns. */}
       <View className="mt-6 flex-row overflow-hidden rounded border border-line bg-surface">
         <Figure
-          value={String(pendingCount)}
+          value={figure(String(pendingCount), !tasksUnknown)}
           label="Tasks left"
           tone={groups.overdue.length ? 'text-error' : pendingCount ? 'text-ink' : 'text-success'}
           onPress={() => router.push('/tasks' as Href)}
         />
         <Rule />
-        <Figure value={compactCount(birds)} label="Birds" tone="text-ink" onPress={() => router.push('/houses')} />
+        <Figure value={figure(compactCount(birds), !!balances)} label="Birds" tone="text-ink" onPress={() => router.push('/houses')} />
         <Rule />
         <Figure
-          value={formatSignedPoints(points)}
+          value={figure(formatSignedPoints(points), !!scores)}
           label="Points"
           tone={points > 0 ? 'text-success' : points < 0 ? 'text-error' : 'text-ink'}
           onPress={() => router.push('/performance')}
@@ -379,11 +406,29 @@ export default function DashboardScreen() {
             <View className="h-bar bg-success" style={{ width: `${(doneCount / total) * 100}%` }} />
           </View>
         )}
-        {ordered.length === 0 ? (
+        {tasksFailed ? (
+          <View className="items-center gap-1 px-4 py-8">
+            <Feather name="wifi-off" size={28} color={theme.muted} />
+            <Text className="mt-2 font-body-semibold text-body text-ink">{"Couldn't load today's tasks."}</Text>
+            <Pressable
+              onPress={() => void tasksQ.refetch()}
+              accessibilityRole="button"
+              hitSlop={8}
+              className="mt-2 min-h-tap justify-center px-4"
+            >
+              <Text className="font-body-semibold text-label text-primary">Try again</Text>
+            </Pressable>
+          </View>
+        ) : tasksUnknown ? (
+          <View className="gap-4 p-4">
+            <Skeleton height={20} width="70%" />
+            <Skeleton height={20} width="55%" />
+          </View>
+        ) : ordered.length === 0 ? (
           <View className="items-center gap-1 px-4 py-10">
             <Feather name="check-circle" size={28} color={theme.success} />
             <Text className="mt-2 font-body-semibold text-body text-ink">Nothing assigned today.</Text>
-            <Text className="font-body text-label text-muted">Tap + to log anything.</Text>
+            <Text className="font-body text-label text-muted">Use the + button below to log anything.</Text>
           </View>
         ) : (
           ordered.map((task, i) => {
@@ -468,7 +513,12 @@ export default function DashboardScreen() {
         onAction={() => router.push('/houses')}
       />
       <View className="overflow-hidden rounded border border-line bg-surface">
-        {activeBalances.length === 0 ? (
+        {!balances ? (
+          <View className="gap-4 p-4">
+            <Skeleton height={20} width="60%" />
+            <Skeleton height={20} width="45%" />
+          </View>
+        ) : activeBalances.length === 0 ? (
           <View className="items-center gap-2 px-4 py-10">
             <Feather name="home" size={28} color={theme.muted} />
             <Text className="font-body-semibold text-body text-ink">No running batches.</Text>

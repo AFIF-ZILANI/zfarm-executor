@@ -6,7 +6,7 @@ import { ScoreItem } from '@/components/member-sections';
 import { Screen } from '@/components/ui/screen';
 import { Header } from '@/components/ui/header';
 import { Card, StatCard } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyState, LoadFailed } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppText } from '@/components/ui/text';
 import { Icon, IconTile } from '@/components/ui/icon';
@@ -19,6 +19,7 @@ import { monthRange, clampAdjustment } from '@/lib/farm';
 import { formatMoney, formatSignedPoints } from '@/lib/format';
 import { monthOffsetFor, recordForMonth, signedPercent, splitPoints } from '@/lib/performance-view';
 import type { ScoreEntry, PayrollRecord } from '@/lib/types';
+import { useNow } from '@/lib/use-now';
 
 const REFRESH_TIMEOUT_MS = 6000;
 const SHOWN = 4;
@@ -39,8 +40,8 @@ export default function PerformanceScreen() {
   const theme = useTheme();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { employee } = useSession();
-  // Held in state: new Date() during render is impure, and the month maths needs one stable "now".
-  const [now] = useState(() => new Date());
+  // One stable "now" for the month maths, moved on when the screen comes back into view.
+  const [now] = useNow();
   const [monthOffset, setMonthOffset] = useState(0);
   const [allScores, setAllScores] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,6 +71,9 @@ export default function PerformanceScreen() {
   const pointsColor = points > 0 ? 'success' : points < 0 ? 'critical' : 'ink';
   const adjustColor = adjustment > 0 ? 'success' : adjustment < 0 ? 'critical' : 'ink';
   const isLoading = scoresQ.isLoading;
+  // A failed load is unknown, not zero: "0 points, no points that month" told workers they'd lost them.
+  const scoresFailed = scoresQ.isError && !scoresQ.data;
+  const payFailed = payrollQ.isError && !payrollQ.data;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -121,8 +125,8 @@ export default function PerformanceScreen() {
           </View>
         ) : (
           // Zero is shown as 0, never hidden — a blank where a number belongs reads as a bug.
-          <AppText variant="hero" color={pointsColor} style={styles.centre}>
-            {formatSignedPoints(points)}
+          <AppText variant="hero" color={scoresFailed ? 'muted' : pointsColor} style={styles.centre}>
+            {scoresFailed ? '–' : formatSignedPoints(points)}
           </AppText>
         )}
 
@@ -134,8 +138,8 @@ export default function PerformanceScreen() {
           <AppText variant="label" color="muted">
             {label}
           </AppText>
-          <AppText variant="figure" color={adjustColor}>
-            {signedPercent(adjustment)}
+          <AppText variant="figure" color={scoresFailed && !record ? 'muted' : adjustColor}>
+            {scoresFailed && !record ? '–' : signedPercent(adjustment)}
           </AppText>
         </View>
         <AppText variant="caption" color="muted" style={styles.centre}>
@@ -182,6 +186,10 @@ export default function PerformanceScreen() {
             <Skeleton key={i} height={88} />
           ))}
         </View>
+      ) : scoresFailed ? (
+        <Card style={styles.card}>
+          <LoadFailed what="your points" onRetry={() => void scoresQ.refetch()} />
+        </Card>
       ) : entries.length === 0 ? (
         <Card style={styles.card}>
           <EmptyState
@@ -212,7 +220,11 @@ export default function PerformanceScreen() {
           Pay history
         </AppText>
       </View>
-      {records.length === 0 ? (
+      {payFailed ? (
+        <Card style={styles.card}>
+          <LoadFailed what="your pay history" onRetry={() => void payrollQ.refetch()} />
+        </Card>
+      ) : records.length === 0 ? (
         <Card style={styles.card}>
           <EmptyState compact icon="calendar" tint="surfaceAlt" title="First payroll runs at month end." />
         </Card>

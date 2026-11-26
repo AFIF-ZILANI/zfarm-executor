@@ -1,4 +1,5 @@
-import { Alert } from 'react-native';
+import { Alert, Platform, ToastAndroid } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { enqueue } from '@/lib/outbox';
 import { triggerFlush } from '@/lib/use-outbox';
@@ -43,6 +44,12 @@ export function useQueuedSubmit() {
       );
       return false;
     }
+
+    // Every form used to just close, so nobody could tell the save worked. One buzz and one line, here in
+    // the one write path, confirms it for every form. "Saved" is true the moment it's queued; the sync
+    // banner says whether it has reached the server yet. ponytail: Android-only toast (the app ships for Android); iOS gets the buzz only.
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (Platform.OS === 'android') ToastAndroid.show('Saved', ToastAndroid.SHORT);
 
     void triggerFlush(queryClient);
     return true;

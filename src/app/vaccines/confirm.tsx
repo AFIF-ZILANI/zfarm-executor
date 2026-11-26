@@ -8,7 +8,7 @@ import * as Crypto from 'expo-crypto';
 import { FormScreen } from '@/components/ui/form-screen';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyState, LoadFailed } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { TextField } from '@/components/ui/text-field';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -145,6 +145,10 @@ export default function ConfirmVaccineScreen() {
     >
       {scheduleQ.isPending ? (
         <Skeleton height={160} />
+      ) : scheduleQ.isError && !scheduleQ.data ? (
+        <Card>
+          <LoadFailed what="the vaccine schedule" onRetry={() => void scheduleQ.refetch()} />
+        </Card>
       ) : !row ? (
         <Card>
           <EmptyState compact icon="alert-circle" tint="surfaceAlt" title="This vaccine isn't on the schedule any more." />

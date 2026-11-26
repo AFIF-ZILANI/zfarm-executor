@@ -4,7 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { LevelBar, categoryIcon } from '@/components/stock-item-row';
 import { Card } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyState, LoadFailed } from '@/components/ui/empty-state';
 import { Header } from '@/components/ui/header';
 import { IconTile } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
@@ -61,6 +61,7 @@ export default function StockItemScreen() {
   };
 
   const loading = (items.isPending && !items.data) || (rows.isPending && !rows.data);
+  const failed = (items.isError && !items.data) || (rows.isError && !rows.data);
   const groups = line ? groupLocations(line) : null;
   const state = line ? stockState(line) : 'OK';
   const gap = line ? reorderGap(line) : null;
@@ -126,6 +127,10 @@ export default function StockItemScreen() {
             <Skeleton key={i} height={96} />
           ))}
         </View>
+      ) : failed ? (
+        <Card style={styles.card}>
+          <LoadFailed what="this item" onRetry={() => void refresh()} />
+        </Card>
       ) : !line || !groups ? (
         <Card style={styles.card}>
           <EmptyState

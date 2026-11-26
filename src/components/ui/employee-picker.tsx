@@ -39,7 +39,7 @@ export function EmployeePicker({
   error,
 }: EmployeePickerProps) {
   const qs = role ? `role=${role}&limit=100` : 'limit=100';
-  const { data, isLoading } = useGetData<Paginated<Employee>>(`/employees?${qs}`, [
+  const { data, isLoading, isError, refetch } = useGetData<Paginated<Employee>>(`/employees?${qs}`, [
     'employees',
     role ?? 'all',
   ]);
@@ -54,6 +54,7 @@ export function EmployeePicker({
       getSubLabel={(e) => humanise(e.role)}
       onChange={onChange}
       loading={isLoading}
+      onRetry={isError && !data ? () => void refetch() : undefined}
       error={error}
       emptyLabel="No employees yet."
     />

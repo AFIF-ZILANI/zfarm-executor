@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { humanise } from '@/lib/profile-format';
 import { PickerField } from '@/components/ui/picker-field';
-import { useGetData, type Paginated } from '@/lib/api';
+import { useGetAllPages } from '@/lib/api';
 import type { House } from '@/lib/types';
 
 const HOUSES_KEY = ['houses', 'active'];
 
+/** Every active house, every page: one page of 100 left the rest out of the picker and the Houses totals. */
 export function useHouseOptions() {
-  return useGetData<Paginated<House>>('/houses?is_active=true&limit=100', HOUSES_KEY);
+  return useGetAllPages<House>('/houses?is_active=true', HOUSES_KEY);
 }
 
 /**
@@ -45,7 +46,7 @@ type HousePickerProps = {
 };
 
 export function HousePicker({ value, onChange, error, label = 'House' }: HousePickerProps) {
-  const { data, isLoading } = useHouseOptions();
+  const { data, isLoading, isError, refetch } = useHouseOptions();
 
   return (
     <PickerField
@@ -57,6 +58,7 @@ export function HousePicker({ value, onChange, error, label = 'House' }: HousePi
       getSubLabel={(h) => humanise(h.type)}
       onChange={onChange}
       loading={isLoading}
+      onRetry={isError && !data ? () => void refetch() : undefined}
       error={error}
       emptyLabel="No active houses."
     />

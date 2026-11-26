@@ -52,6 +52,17 @@ export function groupTasks(tasks: TaskAssignment[], now: Date): TaskGroups {
   return groups;
 }
 
+/** Done tasks finished on the phone's calendar day of `now` (by completion time, else due time). Home's
+ *  "Today" card counted every task ever done, so it read "5 of 5 done" with five from a month ago. */
+export function doneToday(done: TaskAssignment[], now: Date): TaskAssignment[] {
+  const from = startOfLocalDay(now);
+  const to = startOfNextLocalDay(now);
+  return done.filter((t) => {
+    const ms = new Date(t.completed_at ?? t.due_at).getTime();
+    return ms >= from && ms < to;
+  });
+}
+
 /** "Today", "Tomorrow", "Yesterday" or "Oct 9" — by calendar day where the person is. Empty when unreadable. */
 export function dueLabel(iso: string | null | undefined, now: Date): string {
   const d = iso ? new Date(iso) : null;

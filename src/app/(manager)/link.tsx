@@ -9,7 +9,7 @@ import { Header } from '@/components/ui/header';
 import { Card } from '@/components/ui/card';
 import { KpiTile } from '@/components/ui/kpi-tile';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyState, LoadFailed } from '@/components/ui/empty-state';
 import { LedgerRow } from '@/components/ui/ledger-row';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppText } from '@/components/ui/text';
@@ -68,7 +68,12 @@ export default function LinkItemsScreen() {
   dayStart.setHours(0, 0, 0, 0);
   const since = dayStart.toISOString();
 
-  const { data: purchaseItems, isLoading: lotsLoading } = useGetData<Paginated<PurchaseItem>>(
+  const {
+    data: purchaseItems,
+    isLoading: lotsLoading,
+    isError: lotsFailed,
+    refetch: refetchLots,
+  } = useGetData<Paginated<PurchaseItem>>(
     `/purchase-items?limit=100&since=${encodeURIComponent(since)}`,
     ['purchase-items', since],
   );
@@ -202,6 +207,10 @@ export default function LinkItemsScreen() {
           <View style={styles.list}>
             <Skeleton height={104} />
             <Skeleton height={104} />
+          </View>
+        ) : lotsFailed && !purchaseItems ? (
+          <View style={styles.list}>
+            <LoadFailed compact={false} what="the lots" onRetry={() => void refetchLots()} />
           </View>
         ) : trackedLots.length === 0 ? (
           <View style={styles.list}>

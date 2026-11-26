@@ -120,6 +120,7 @@ export default function MortalityScreen() {
         icon: done ? 'check' : undefined,
         onPress: handleSubmit,
         disabled: !isValid,
+        reason: !house ? 'Pick a house first.' : balance && !(countNum > 0) ? 'Enter how many birds died.' : undefined,
         loading: submitting && !done,
       }}
     >

@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 
-import { dueLabel, groupTasks, taskHref } from './tasks-view';
+import { doneToday, dueLabel, groupTasks, taskHref } from './tasks-view';
 import type { TaskAssignment } from './types';
 
 // Built from LOCAL components so the tests pass in any timezone: "today" is the phone's calendar day.
@@ -116,3 +116,17 @@ assert.equal(
 );
 
 console.log('tasks-view checks passed');
+
+// --- done today ----------------------------------------------------------------------------------------
+{
+  const kept = doneToday(
+    [
+      task('done-this-morning', 'DONE', at(7, 9), { completed_at: at(7, 9, 30) }),
+      task('done-last-month', 'DONE', at(7, 9, 0, 8), { completed_at: at(7, 9, 30, 8) }),
+      task('due-today-no-stamp', 'DONE', at(7, 8)),
+      task('done-yesterday-late', 'DONE', at(6, 23), { completed_at: at(6, 23, 50) }),
+    ],
+    now,
+  );
+  assert.deepEqual(kept.map((t) => t.id), ['done-this-morning', 'due-today-no-stamp']);
+}

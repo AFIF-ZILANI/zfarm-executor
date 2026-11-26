@@ -48,3 +48,18 @@ const styles = StyleSheet.create({
   centre: { textAlign: 'center' },
   action: { marginTop: Spacing.md },
 });
+
+/** A load that failed, said as a failure with a way to try again. Never "nothing here": showing an empty
+ *  state when the server couldn't be reached told workers they had no points, no batch, no stock. */
+export function LoadFailed({ what, onRetry, compact = true }: { what: string; onRetry: () => void; compact?: boolean }) {
+  return (
+    <EmptyState
+      compact={compact}
+      icon="alert-circle"
+      tint="tintRed"
+      title={`Couldn't load ${what}.`}
+      body="Check your connection, then try again."
+      action={{ label: 'Try again', onPress: onRetry }}
+    />
+  );
+}

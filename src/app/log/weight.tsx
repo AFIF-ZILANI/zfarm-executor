@@ -70,6 +70,13 @@ export default function WeightScreen() {
         label: avgNum > 0 ? `Record ${avgNum.toLocaleString()} g average` : 'Record weight',
         onPress: handleSubmit,
         disabled: !isValid,
+        reason: !house
+          ? 'Pick a house first.'
+          : !(avgNum > 0)
+            ? 'Enter the average weight.'
+            : !isValid
+              ? 'Enter how many birds you weighed.'
+              : undefined,
         loading: submitting,
       }}
     >

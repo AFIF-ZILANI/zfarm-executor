@@ -8,7 +8,7 @@ import { Screen } from '@/components/ui/screen';
 import { Header } from '@/components/ui/header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyState, LoadFailed } from '@/components/ui/empty-state';
 import { LedgerRow } from '@/components/ui/ledger-row';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppText } from '@/components/ui/text';
@@ -45,10 +45,11 @@ export default function SellScanScreen() {
   const [scanning, setScanning] = useState(false);
   const [mode, setMode] = useState<Mode>('auto');
 
-  const { data: waiting, isLoading } = useGetData<ScanSale[]>('/sale-scans', ['sale-scans']);
-  const { data: sale } = useGetData<ScanSaleDetail>(`/sale-scans/${saleId ?? ''}`, ['sale-scans', saleId], {
+  const { data: waiting, isLoading, isError, refetch } = useGetData<ScanSale[]>('/sale-scans', ['sale-scans']);
+  const saleQ = useGetData<ScanSaleDetail>(`/sale-scans/${saleId ?? ''}`, ['sale-scans', saleId], {
     enabled: saleId !== null,
   });
+  const sale = saleQ.data;
 
   const progress = sale ? saleProgress(sale) : null;
   const done = progress?.done ?? false;
@@ -94,6 +95,10 @@ export default function SellScanScreen() {
             <Skeleton height={104} />
             <Skeleton height={104} />
           </View>
+        ) : isError && !waiting ? (
+          <View style={styles.list}>
+            <LoadFailed compact={false} what="the sold packs" onRetry={() => void refetch()} />
+          </View>
         ) : (waiting ?? []).length === 0 ? (
           <View style={styles.list}>
             <EmptyState
@@ -117,7 +122,11 @@ export default function SellScanScreen() {
   return (
     <Screen>
       <Header title="Sold packs" leading="back" />
-      {!sale || !progress ? (
+      {saleQ.isError && !sale ? (
+        <View style={styles.list}>
+          <LoadFailed compact={false} what="this sale" onRetry={() => void saleQ.refetch()} />
+        </View>
+      ) : !sale || !progress ? (
         <View style={styles.list}>
           <Skeleton height={160} />
         </View>
