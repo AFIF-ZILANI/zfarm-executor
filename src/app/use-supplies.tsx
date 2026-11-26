@@ -92,7 +92,8 @@ export default function UseSuppliesScreen() {
       hint="Feed, husk and other items without QR codes, used in a house. It comes off that house's stock."
       dirty={!!picked || !!quantity || !!note}
       submit={{
-        label: quantityNum > 0 && item ? `Use ${bagged ? stock(baseQty) : `${quantity} ${unit?.name.toLowerCase() ?? ''}`} ${item.name.toLowerCase()}` : 'Use supplies',
+        // The amount as typed, in the unit picked, no item name: "Use 3 Bag", "Use 20 Kg". Same as Move supplies.
+        label: quantityNum > 0 && item ? `Use ${quantity} ${unit?.name ?? ''}`.trim() : 'Use supplies',
         onPress: handleSubmit,
         disabled: !isValid,
         reason: !house ? 'Pick a house first.' : !item ? 'Pick an item.' : !(quantityNum > 0) ? 'Enter the quantity.' : undefined,
