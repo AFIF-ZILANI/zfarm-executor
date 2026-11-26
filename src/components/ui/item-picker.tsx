@@ -16,6 +16,11 @@ type ItemPickerProps = {
   placeholder?: string;
   /** For an optional use: shows a × that puts it back to nothing. */
   onClear?: () => void;
+  /** Narrows the list on the phone, e.g. to what is in stock. */
+  filter?: (item: Item) => boolean;
+  /** Set while whatever `filter` reads is still loading. */
+  filterLoading?: boolean;
+  emptyLabel?: string;
 };
 
 export function ItemPicker({
@@ -26,6 +31,9 @@ export function ItemPicker({
   error,
   placeholder,
   onClear,
+  filter,
+  filterLoading,
+  emptyLabel = 'No items found.',
 }: ItemPickerProps) {
   // Every page, not just the first 100: the picker's search filters what is loaded here.
   const params = new URLSearchParams({ is_active: 'true' });
@@ -42,17 +50,17 @@ export function ItemPicker({
     <PickerField
       label="Item"
       value={value}
-      options={data?.results ?? []}
+      options={filter ? (data?.results ?? []).filter(filter) : (data?.results ?? [])}
       getKey={(i) => i.id}
       getLabel={(i) => i.name}
       getSubLabel={(i) => humanise(i.category)}
       onChange={onChange}
-      loading={isLoading}
+      loading={isLoading || !!filterLoading}
       onRetry={isError && !data ? () => void refetch() : undefined}
       error={error}
       onClear={onClear}
       placeholder={placeholder}
-      emptyLabel="No items found."
+      emptyLabel={emptyLabel}
     />
   );
 }
