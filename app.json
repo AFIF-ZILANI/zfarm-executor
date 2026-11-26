@@ -2,7 +2,7 @@
   "expo": {
     "name": "ZFarm Executor",
     "slug": "zfarm",
-    "version": "1.0.13",
+    "version": "1.0.14",
     "orientation": "portrait",
     "icon": "./assets/brand/ios/AppIcon-light-1024.png",
     "scheme": "zfarm",
@@ -16,7 +16,7 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "pan",
       "package": "com.zerod.fms",
-      "versionCode": 14,
+      "versionCode": 15,
       "permissions": [
         "android.permission.REQUEST_INSTALL_PACKAGES"
       ]
