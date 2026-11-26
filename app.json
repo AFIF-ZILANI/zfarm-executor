@@ -16,7 +16,10 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "pan",
       "package": "com.zerod.fms",
-      "versionCode": 13
+      "versionCode": 13,
+      "permissions": [
+        "android.permission.REQUEST_INSTALL_PACKAGES"
+      ]
     },
     "web": {
       "output": "single",
@@ -74,7 +77,11 @@
         "expo-build-properties",
         {
           "android": {
-            "extraProguardRules": "# ML Kit builds its *Registrar classes by reflection; R8 strips their no-arg constructors and the barcode scanner never registers.\n-keep class com.google.mlkit.**.*Registrar { <init>(); }"
+            "extraProguardRules": "# ML Kit builds its *Registrar classes by reflection; R8 strips their no-arg constructors and the barcode scanner never registers.\n-keep class com.google.mlkit.**.*Registrar { <init>(); }",
+            "buildArchs": [
+              "arm64-v8a",
+              "armeabi-v7a"
+            ]
           }
         }
       ]

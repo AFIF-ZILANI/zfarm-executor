@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, type ComponentRef, type Ref } from 'react';
 import { Pressable, TextInput, View, StyleSheet, type TextInputProps } from 'react-native';
 
 import { AppText } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
 import { FontFamily, Radius, Size, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+export type TextFieldRef = ComponentRef<typeof TextInput>;
 
 type TextFieldProps = TextInputProps & {
   label: string;
@@ -15,6 +17,8 @@ type TextFieldProps = TextInputProps & {
   /** The label is carried by the screen around the field (a card title, a button beside it): skip the
    *  eyebrow above the input, and give screen readers the label instead. */
   hideLabel?: boolean;
+  /** React 19 passes ref as a prop: lets a form move focus to the next field. */
+  ref?: Ref<TextFieldRef>;
 };
 
 /** Free text is reserved for reason/note/cause/description — every other

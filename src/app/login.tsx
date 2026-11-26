@@ -1,103 +1,129 @@
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import { Screen } from '@/components/ui/screen';
-import { Header } from '@/components/ui/header';
-import { Card } from '@/components/ui/card';
+import { AuthNotice, AuthShell } from '@/components/auth-shell';
 import { Button } from '@/components/ui/button';
-import { TextField } from '@/components/ui/text-field';
+import { TextField, type TextFieldRef } from '@/components/ui/text-field';
 import { AppText } from '@/components/ui/text';
 import { Spacing } from '@/constants/theme';
-import { ApiError, BASE_URL } from '@/lib/api';
+import { ApiError } from '@/lib/api';
 import { useSession } from '@/lib/session';
+
+type Problem =
+  | { kind: 'unreachable' }
+  | { kind: 'rejected'; message: string }
+  /** The server's 400 for a malformed address: said on the Email field, not as "Validation failed". */
+  | { kind: 'bad-email' }
+  | null;
 
 /** The gate in _layout.tsx sends anyone without a session here, and away again once there is one. */
 export default function LoginScreen() {
   const { login, expired } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [unreachable, setUnreachable] = useState(false);
+  // Field hints appear only after a tap on Sign in: a grey, dead button never says what it's waiting for.
+  const [tried, setTried] = useState(false);
+  const [problem, setProblem] = useState<Problem>(null);
   const [busy, setBusy] = useState(false);
+  const passwordRef = useRef<TextFieldRef>(null);
 
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !busy;
+  const emailMissing = email.trim().length === 0;
+  const passwordMissing = password.length === 0;
 
   const submit = async () => {
+    if (busy) return;
+    setTried(true);
+    if (emailMissing || passwordMissing) return;
     setBusy(true);
-    setError('');
-    setUnreachable(false);
+    setProblem(null);
     try {
       await login(email.trim(), password);
       // The gate navigates on its own once the session lands.
     } catch (e) {
-      if (e instanceof ApiError && e.status === 0) setUnreachable(true);
-      else setError(e instanceof ApiError ? e.message : 'Something went wrong. Try again.');
+      if (e instanceof ApiError && e.status === 0) setProblem({ kind: 'unreachable' });
+      else if (e instanceof ApiError && e.status === 400 && e.fieldError('email')) setProblem({ kind: 'bad-email' });
+      else if (e instanceof ApiError && e.status === 401)
+        setProblem({ kind: 'rejected', message: "That email and password don't match. Check both and try again." });
+      else setProblem({ kind: 'rejected', message: e instanceof ApiError ? e.message : 'Something went wrong. Try again.' });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Screen>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Header title="Sign in" />
-        <AppText variant="body" color="muted">
-          ZFarm Executor, the field app for ZeroD Farms staff.
+    <AuthShell
+      title="Sign in"
+      intro="Use the email and password your manager gave you."
+      footer={
+        <AppText variant="caption" color="muted" style={styles.centre}>
+          Forgot your password? Ask your manager to reset it.
         </AppText>
-
-        {expired ? (
-          <AppText variant="body" color="muted" style={styles.notice}>
-            Your session ended. Sign in again — anything you recorded and haven&apos;t synced is still
-            on this phone and will upload afterwards.
-          </AppText>
+      }
+    >
+      <View style={styles.form}>
+        {problem?.kind === 'unreachable' ? (
+          <AuthNotice tone="critical" icon="wifi-off">
+            {"Can't reach the server. Check your internet connection and try again."}
+          </AuthNotice>
+        ) : problem?.kind === 'rejected' ? (
+          <AuthNotice tone="critical" icon="alert-circle">
+            {problem.message}
+          </AuthNotice>
+        ) : expired ? (
+          <AuthNotice tone="warning" icon="clock">
+            {"You were signed out. Sign in again: anything you recorded and haven't synced is still on this phone."}
+          </AuthNotice>
         ) : null}
 
-        <Card style={styles.card}>
-          <View style={styles.fields}>
-            <TextField
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="username"
-            />
-            <TextField
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="current-password"
-              returnKeyType="go"
-              error={error || undefined}
-              onSubmitEditing={() => canSubmit && void submit()}
-            />
-            {unreachable ? (
-              <View>
-                <AppText variant="caption" color="critical">
-                  Can&apos;t reach the server. You need a connection to sign in.
-                </AppText>
-                <AppText variant="data" color="muted" selectable>
-                  {BASE_URL}
-                </AppText>
-              </View>
-            ) : null}
-            <Button label="Sign in" onPress={() => void submit()} disabled={!canSubmit} loading={busy} />
-          </View>
-        </Card>
-
-        <AppText variant="caption" color="muted" style={styles.notice}>
-          Your manager gives you an email and a temporary password. Forgot yours? Ask them to reset it.
-        </AppText>
-      </KeyboardAvoidingView>
-    </Screen>
+        <TextField
+          label="Email"
+          value={email}
+          onChangeText={(v) => {
+            setEmail(v);
+            setProblem(null);
+          }}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="username"
+          textContentType="username"
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          error={
+            tried && emailMissing
+              ? 'Enter your email.'
+              : problem?.kind === 'bad-email'
+                ? "That isn't a full email address. Check it and try again."
+                : undefined
+          }
+        />
+        <TextField
+          ref={passwordRef}
+          label="Password"
+          value={password}
+          onChangeText={(v) => {
+            setPassword(v);
+            setProblem(null);
+          }}
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="current-password"
+          textContentType="password"
+          returnKeyType="go"
+          onSubmitEditing={() => void submit()}
+          error={tried && passwordMissing ? 'Enter your password.' : undefined}
+        />
+        <View style={styles.action}>
+          <Button label={busy ? 'Signing in…' : 'Sign in'} onPress={() => void submit()} loading={busy} />
+        </View>
+      </View>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: Spacing.md },
-  fields: { gap: Spacing.lg, padding: Spacing.lg },
-  notice: { marginTop: Spacing.md },
+  form: { gap: Spacing.lg },
+  action: { marginTop: Spacing.sm },
+  centre: { textAlign: 'center' },
 });

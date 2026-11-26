@@ -1,8 +1,11 @@
 /** The bits of a GitHub release the update check reads. */
 export type Release = {
   tag_name: string;
-  assets: { name: string; browser_download_url: string }[];
+  assets: { name: string; browser_download_url: string; size?: number }[];
 };
+
+/** An APK to offer: its version, where to fetch it, and its size in bytes (0 when unknown). */
+export type AppUpdate = { version: string; url: string; size: number };
 
 const parts = (v: string) =>
   v
@@ -23,8 +26,10 @@ export function isNewer(latest: string, current: string): boolean {
 }
 
 /** The update to offer, or null when the release isn't newer or carries no APK. */
-export function pickUpdate(release: Release, current: string): { version: string; url: string } | null {
+export function pickUpdate(release: Release, current: string): AppUpdate | null {
   if (!isNewer(release.tag_name, current)) return null;
   const apk = release.assets.find((a) => a.name.toLowerCase().endsWith('.apk'));
-  return apk ? { version: release.tag_name.replace(/^v/i, ''), url: apk.browser_download_url } : null;
+  return apk
+    ? { version: release.tag_name.replace(/^v/i, ''), url: apk.browser_download_url, size: apk.size ?? 0 }
+    : null;
 }
